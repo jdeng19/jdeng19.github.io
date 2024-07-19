@@ -1,3 +1,4 @@
+// Load the dataset and initialize the visualization
 d3.csv("data/owid-covid-data.csv").then(data => {
    data.forEach(d => {
        d.date = new Date(d.date);
@@ -26,6 +27,11 @@ function renderTotalCases(data) {
                  .attr("width", 960)
                  .attr("height", 500);
 
+   const tooltip = d3.select("#visualization")
+                     .append("div")
+                     .attr("class", "tooltip")
+                     .style("opacity", 0);
+
    const x = d3.scaleTime()
                .domain(d3.extent(data, d => d.date))
                .range([0, 960]);
@@ -52,6 +58,28 @@ function renderTotalCases(data) {
    svg.append("g")
       .call(d3.axisLeft(y));
 
+   svg.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => x(d.date))
+      .attr("cy", d => y(d.total_cases))
+      .attr("r", 3)
+      .attr("fill", "red")
+      .on("mouseover", function(event, d) {
+          tooltip.transition()
+                 .duration(200)
+                 .style("opacity", .9);
+          tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Total Cases: ${d.total_cases}`)
+                 .style("left", (event.pageX) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+                 .duration(500)
+                 .style("opacity", 0);
+      });
+
    // Add annotations
    svg.append("text")
       .attr("x", 960 / 2)
@@ -69,6 +97,11 @@ function renderNewCases(data) {
                  .append("svg")
                  .attr("width", 960)
                  .attr("height", 500);
+
+   const tooltip = d3.select("#visualization")
+                     .append("div")
+                     .attr("class", "tooltip")
+                     .style("opacity", 0);
 
    const x = d3.scaleTime()
                .domain(d3.extent(data, d => d.date))
@@ -96,6 +129,28 @@ function renderNewCases(data) {
    svg.append("g")
       .call(d3.axisLeft(y));
 
+   svg.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => x(d.date))
+      .attr("cy", d => y(d.new_cases))
+      .attr("r", 3)
+      .attr("fill", "red")
+      .on("mouseover", function(event, d) {
+          tooltip.transition()
+                 .duration(200)
+                 .style("opacity", .9);
+          tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>New Cases: ${d.new_cases}`)
+                 .style("left", (event.pageX) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+                 .duration(500)
+                 .style("opacity", 0);
+      });
+
    // Add annotations
    svg.append("text")
       .attr("x", 960 / 2)
@@ -113,6 +168,11 @@ function renderTotalDeaths(data) {
                  .append("svg")
                  .attr("width", 960)
                  .attr("height", 500);
+
+   const tooltip = d3.select("#visualization")
+                     .append("div")
+                     .attr("class", "tooltip")
+                     .style("opacity", 0);
 
    const x = d3.scaleTime()
                .domain(d3.extent(data, d => d.date))
@@ -140,6 +200,28 @@ function renderTotalDeaths(data) {
    svg.append("g")
       .call(d3.axisLeft(y));
 
+   svg.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => x(d.date))
+      .attr("cy", d => y(d.total_deaths))
+      .attr("r", 3)
+      .attr("fill", "red")
+      .on("mouseover", function(event, d) {
+          tooltip.transition()
+                 .duration(200)
+                 .style("opacity", .9);
+          tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Total Deaths: ${d.total_deaths}`)
+                 .style("left", (event.pageX) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+                 .duration(500)
+                 .style("opacity", 0);
+      });
+
    // Add annotations
    svg.append("text")
       .attr("x", 960 / 2)
@@ -157,6 +239,11 @@ function renderNewDeaths(data) {
                  .append("svg")
                  .attr("width", 960)
                  .attr("height", 500);
+
+   const tooltip = d3.select("#visualization")
+                     .append("div")
+                     .attr("class", "tooltip")
+                     .style("opacity", 0);
 
    const x = d3.scaleTime()
                .domain(d3.extent(data, d => d.date))
@@ -183,6 +270,28 @@ function renderNewDeaths(data) {
 
    svg.append("g")
       .call(d3.axisLeft(y));
+
+   svg.selectAll("circle")
+      .data(data)
+      .enter()
+      .append("circle")
+      .attr("cx", d => x(d.date))
+      .attr("cy", d => y(d.new_deaths))
+      .attr("r", 3)
+      .attr("fill", "red")
+      .on("mouseover", function(event, d) {
+          tooltip.transition()
+                 .duration(200)
+                 .style("opacity", .9);
+          tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>New Deaths: ${d.new_deaths}`)
+                 .style("left", (event.pageX) + "px")
+                 .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function(d) {
+          tooltip.transition()
+                 .duration(500)
+                 .style("opacity", 0);
+      });
 
    // Add annotations
    svg.append("text")
