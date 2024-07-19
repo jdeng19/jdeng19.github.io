@@ -1,7 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 Narrative Visualization</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
 <body>
-<h1>Hello World</h1>
-<p>I'm hosted with GitHub Pages.</p>
+    <div id="container">
+        <div id="visualization"></div>
+        <div id="controls">
+            <button id="scene1">Total Cases</button>
+            <button id="scene2">New Cases</button>
+            <button id="scene3">Total Deaths</button>
+            <button id="scene4">New Deaths</button>
+        </div>
+    </div>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
