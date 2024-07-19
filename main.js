@@ -1,5 +1,5 @@
 // Load the dataset and initialize the visualization
-d3.csv("owid-covid-data.csv").then(data => {
+d3.csv("https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv").then(data => {
     data.forEach(d => {
         d.date = new Date(d.date);
         d.total_cases = +d.total_cases;
