@@ -1,4 +1,3 @@
-// Load the dataset and initialize the visualization
 d3.csv("data/owid-covid-data.csv").then(data => {
    data.forEach(d => {
        d.date = new Date(d.date);
@@ -53,7 +52,7 @@ function renderTotalCases(data) {
 
    svg.append("g")
       .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%Y")));
 
    svg.append("g")
       .call(d3.axisLeft(y));
@@ -71,7 +70,7 @@ function renderTotalCases(data) {
                  .duration(200)
                  .style("opacity", .9);
           tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Total Cases: ${d.total_cases}`)
-                 .style("left", (event.pageX) + "px")
+                 .style("left", (event.pageX + 5) + "px")
                  .style("top", (event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {
@@ -124,7 +123,7 @@ function renderNewCases(data) {
 
    svg.append("g")
       .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%Y")));
 
    svg.append("g")
       .call(d3.axisLeft(y));
@@ -142,7 +141,7 @@ function renderNewCases(data) {
                  .duration(200)
                  .style("opacity", .9);
           tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>New Cases: ${d.new_cases}`)
-                 .style("left", (event.pageX) + "px")
+                 .style("left", (event.pageX + 5) + "px")
                  .style("top", (event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {
@@ -195,7 +194,7 @@ function renderTotalDeaths(data) {
 
    svg.append("g")
       .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%Y")));
 
    svg.append("g")
       .call(d3.axisLeft(y));
@@ -213,7 +212,7 @@ function renderTotalDeaths(data) {
                  .duration(200)
                  .style("opacity", .9);
           tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>Total Deaths: ${d.total_deaths}`)
-                 .style("left", (event.pageX) + "px")
+                 .style("left", (event.pageX + 5) + "px")
                  .style("top", (event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {
@@ -266,7 +265,7 @@ function renderNewDeaths(data) {
 
    svg.append("g")
       .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x));
+      .call(d3.axisBottom(x).tickFormat(d3.timeFormat("%Y")));
 
    svg.append("g")
       .call(d3.axisLeft(y));
@@ -284,7 +283,7 @@ function renderNewDeaths(data) {
                  .duration(200)
                  .style("opacity", .9);
           tooltip.html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.date)}<br>New Deaths: ${d.new_deaths}`)
-                 .style("left", (event.pageX) + "px")
+                 .style("left", (event.pageX + 5) + "px")
                  .style("top", (event.pageY - 28) + "px");
       })
       .on("mouseout", function(d) {
