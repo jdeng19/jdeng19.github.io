@@ -7,16 +7,19 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="container">
-        <div id="visualization"></div>
-        <div id="controls">
-            <button id="scene1">Performance Distribution</button>
-            <button id="scene2">Performance by Gender</button>
-            <button id="scene3">Study Time vs Performance</button>
-            <button id="scene4">Parental Education Influence</button>
+    <div class="container">
+        <div class="header">
+            <h2 class="header__title">Student Performance Analysis</h2>
         </div>
+        <div id="controls">
+            <button id="start-over" class="button">Start Over</button>
+            <button id="back" class="button">Back</button>
+            <button id="forward" class="button enabled">Forward</button>
+        </div>
+        <div id="visualization"></div>
     </div>
-    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-annotation/2.5.1/d3-annotation.min.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

@@ -1,289 +1,441 @@
-d3.csv("data/Student_performance_data.csv").then(data => {
-   data.forEach(d => {
-       d.StudyTimeWeekly = +d.StudyTimeWeekly;
-       d.GPA = +d.GPA;
-       d.ParentalEducation = +d.ParentalEducation;
-       d.Absences = +d.Absences;
-       d.Extracurricular = +d.Extracurricular;
-   });
-
+d3.csv("data/Student_performance_data.csv", d => {
+   return {
+      StudyTimeWeekly: +d.StudyTimeWeekly,
+      GPA: +d.GPA,
+      ParentalEducation: +d.ParentalEducation,
+      Absences: +d.Absences,
+      Extracurricular: +d.Extracurricular,
+      Sports: +d.Sports,
+      Music: +d.Music,
+      Volunteering: +d.Volunteering
+   };
+}).then(data => {
+   let currentScene = 0;
+   const scenes = [renderOverview, renderHighlightExtremes, renderExtracurricularByStudyTime, renderGPAByStudyTime];
+   
    // Initial Scene
-   renderStudyTimeVsGPA(data);
-
+   updateButtons();
+   scenes[currentScene](data);
+   
    // Event listeners for buttons
-   d3.select("#scene1").on("click", () => renderStudyTimeVsGPA(data));
-   d3.select("#scene2").on("click", () => renderGPAByParentalEducation(data));
-   d3.select("#scene3").on("click", () => renderGPAByExtracurricular(data));
-   d3.select("#scene4").on("click", () => renderAbsencesVsGPA(data));
+   d3.select("#start-over").on("click", () => {
+      currentScene = 0;
+      updateButtons();
+      scenes[currentScene](data);
+   });
+   d3.select("#back").on("click", () => {
+      if (currentScene > 0) {
+         currentScene--;
+         updateButtons();
+         scenes[currentScene](data);
+      }
+   });
+   d3.select("#forward").on("click", () => {
+      if (currentScene < scenes.length - 1) {
+         currentScene++;
+         updateButtons();
+         scenes[currentScene](data);
+      }
+   });
+   
+   function updateButtons() {
+      d3.select("#start-over")
+      .attr("class", currentScene === 0 ? "button disabled" : "button enabled")
+      .attr("disabled", currentScene === 0 ? true : null);
+      d3.select("#back")
+      .attr("class", currentScene === 0 ? "button disabled" : "button enabled")
+      .attr("disabled", currentScene === 0 ? true : null);
+      d3.select("#forward")
+      .attr("class", currentScene === scenes.length - 1 ? "button disabled" : "button enabled")
+      .attr("disabled", currentScene === scenes.length - 1 ? true : null);
+   }
 });
 
-// Function to render Study Time vs GPA
-function renderStudyTimeVsGPA(data) {
-   d3.select("#visualization").html(""); // Clear previous visualization
-
-   const svg = d3.select("#visualization")
-                 .append("svg")
-                 .attr("width", 960)
-                 .attr("height", 500);
-
-   const tooltip = d3.select("#visualization")
-                     .append("div")
-                     .attr("class", "tooltip")
-                     .style("opacity", 0);
-
-   const x = d3.scaleLinear()
-               .domain([0, d3.max(data, d => d.StudyTimeWeekly)])
-               .range([0, 960]);
-
-   const y = d3.scaleLinear()
-               .domain([0, d3.max(data, d => d.GPA)])
-               .range([500, 0]);
-
-   svg.append("g")
-      .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x));
-
-   svg.append("g")
-      .call(d3.axisLeft(y));
-
-   svg.append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".75em")
-      .style("text-anchor", "end")
-      .text("GPA");
-
-   svg.append("text")
-      .attr("x", 960 / 2)
-      .attr("y", 470)
-      .attr("text-anchor", "middle")
-      .text("Study Time (hours)");
-
-   svg.selectAll("circle")
-      .data(data)
-      .enter()
-      .append("circle")
-      .attr("cx", d => x(d.StudyTimeWeekly))
-      .attr("cy", d => y(d.GPA))
-      .attr("r", 3)
-      .attr("fill", "red")
-      .on("mouseover", function(event, d) {
-          tooltip.transition()
-                 .duration(200)
-                 .style("opacity", .9);
-          tooltip.html(`Study Time: ${d.StudyTimeWeekly}<br>GPA: ${d.GPA}`)
-                 .style("left", (event.pageX + 5) + "px")
-                 .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mouseout", function(d) {
-          tooltip.transition()
-                 .duration(500)
-                 .style("opacity", 0);
-      });
+function renderOverview(data) {
+   renderCountByStudyTime(data, "Overview");
 }
 
-// Function to render GPA by Parental Education
-function renderGPAByParentalEducation(data) {
-   d3.select("#visualization").html(""); // Clear previous visualization
+function renderHighlightExtremes(data) {
+   renderCountByStudyTime(data, "", "highlightExtremes");
+}
 
+function setupSvgAndScales() {
+   const margin = { top: 100, right: 50, bottom: 80, left: 80 };
+   const width = 960 - margin.left - margin.right;
+   const height = 500 - margin.top - margin.bottom;
+   
    const svg = d3.select("#visualization")
-                 .append("svg")
-                 .attr("width", 960)
-                 .attr("height", 500);
-
+   .append("svg")
+   .attr("width", width + margin.left + margin.right)
+   .attr("height", height + margin.top + margin.bottom)
+   .append("g")
+   .attr("transform", `translate(${margin.left},${margin.top})`);
+   
    const tooltip = d3.select("#visualization")
-                     .append("div")
-                     .attr("class", "tooltip")
-                     .style("opacity", 0);
+   .append("div")
+   .attr("class", "tooltip")
+   .style("opacity", 0)
+   .style("position", "absolute")
+   .style("pointer-events", "none");
+   
+   return { width, height, margin, svg, tooltip };
+}
 
+function setupAxes(svg, x, y, width, height, margin, title) {
+   svg.append("g")
+   .attr("transform", `translate(0,${height})`)
+   .call(d3.axisBottom(x).tickFormat(d3.format(".0f")));
+   
+   svg.append("g")
+   .call(d3.axisLeft(y).ticks(10));
+   
+   svg.append("text")
+   .attr("transform", "rotate(-90)")
+   .attr("y", -margin.left + 10)
+   .attr("x", -height / 2)
+   .attr("dy", "1em")
+   .style("text-anchor", "middle")
+   .text("Count of Students");
+   
+   svg.append("text")
+   .attr("x", width / 2)
+   .attr("y", height + margin.bottom - 10)
+   .attr("text-anchor", "middle")
+   .text("Study Time (hours)");
+   
+   svg.append("text")
+   .attr("x", width / 2)
+   .attr("y", -margin.top / 2 + 20)
+   .attr("text-anchor", "middle")
+   .style("font-size", "16px")
+   .style("font-weight", "bold")
+   .text(title);
+}
+
+
+function prepareDataForStudyTime(data, current = "") { 
+   let finalData;
+   let countData;
+   
+   // Group the data into 20 intervals
+   if (current === "highlightExtremes" || current === "") {
+      const countByStudyTime = d3.rollup(data, v => v.length, d => d.StudyTimeWeekly);
+      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, count]) => ({ StudyTimeWeekly, count }));
+      
+   } else if (current === "ExtracurricularByStudyTime") {
+      const countByStudyTime = d3.rollup(data, v => ({
+         total: v.length,
+         Extracurricular: d3.sum(v, d => d.Extracurricular),
+         Sports: d3.sum(v, d => d.Sports),
+         Music: d3.sum(v, d => d.Music),
+         Volunteering: d3.sum(v, d => d.Volunteering)
+      }), d => d.StudyTimeWeekly);
+      
+      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, counts]) => ({ StudyTimeWeekly, ...counts }));
+      
+   } else { // current === "GPAByStudyTime"
+      const countByStudyTime = d3.rollup(data, v => ({
+         total: v.length,
+         Grade_F: d3.sum(v, d => d.GPA < 2 ? 1 : 0),
+         Grade_C_D: d3.sum(v, d => d.GPA >= 2 && d.GPA < 3 ? 1 : 0),
+         Grade_A_B: d3.sum(v, d => d.GPA >= 3 ? 1 : 0)
+      }), d => d.StudyTimeWeekly);
+      
+      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, counts]) => ({ StudyTimeWeekly, ...counts }));
+   }
+   
+   countData.sort((a, b) => a.StudyTimeWeekly - b.StudyTimeWeekly);
+   
+   // Determine the 20 evenly spaced intervals
+   const studyTimeExtent = d3.extent(countData, d => d.StudyTimeWeekly);
+   const studyTimeGroups = d3.scaleQuantize()
+   .domain(studyTimeExtent)
+   .range(d3.range(20));
+   
+   if (current === "highlightExtremes" || current === "") {
+      const groupedData = d3.rollups(countData, v => d3.sum(v, d => d.count), d => studyTimeGroups(d.StudyTimeWeekly));
+      finalData = Array.from(groupedData, ([group, count]) => ({
+         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
+         count
+      }));
+      
+   } else if (current === "ExtracurricularByStudyTime") {
+      const groupedData = d3.rollups(countData, v => ({
+         total: d3.sum(v, d => d.total),
+         Extracurricular: d3.sum(v, d => d.Extracurricular),
+         Sports: d3.sum(v, d => d.Sports),
+         Music: d3.sum(v, d => d.Music),
+         Volunteering: d3.sum(v, d => d.Volunteering)
+      }), d => studyTimeGroups(d.StudyTimeWeekly));
+      
+      finalData = Array.from(groupedData, ([group, counts]) => ({
+         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
+         ...counts
+      }));
+      
+   } else { // current === "GPAByStudyTime"
+      const groupedData = d3.rollups(countData, v => ({
+         total: d3.sum(v, d => d.total),
+         Grade_F: d3.sum(v, d => d.Grade_F),
+         Grade_C_D: d3.sum(v, d => d.Grade_C_D),
+         Grade_A_B: d3.sum(v, d => d.Grade_A_B)
+      }), d => studyTimeGroups(d.StudyTimeWeekly));
+      
+      finalData = Array.from(groupedData, ([group, counts]) => ({
+         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
+         ...counts
+      }));
+   }
+   return finalData;
+}
+
+
+function highlightExtremesAnnotations(x, y, finalData) {
+   const maxCount = d3.max(finalData, d => d.count);
+   const minCount = d3.min(finalData, d => d.count);
+   const maxData = finalData.find(d => d.count === maxCount);
+   const minData = finalData.find(d => d.count === minCount);
+
+   const annotations = [
+      {
+         note: {
+            label: `Study Time: ${d3.format(".0f")(maxData.StudyTimeWeekly)} hours`,
+            title: `Max Count: ${maxCount}`,
+            wrap: 200,
+         },
+         x: x(maxData.StudyTimeWeekly) + x.bandwidth() / 2,
+         y: y(maxCount),
+         dy: -10,
+         dx: 0,
+         subject: { radius: 15, radiusPadding: 5 },
+         color: ["darkred"]
+      },
+      {
+         note: {
+            label: `Study Time: ${d3.format(".0f")(minData.StudyTimeWeekly)} hours`,
+            title: `Min Count: ${minCount}`,
+            wrap: 200,
+         },
+         x: x(minData.StudyTimeWeekly) + x.bandwidth() / 2,
+         y: y(minCount),
+         dy: -10,
+         dx: 0,
+         subject: { radius: 15, radiusPadding: 5 },
+         color: ["darkred"]
+      }
+   ];
+   return annotations;
+}
+
+
+function gpaAnnotations(x, y, finalData) {
+   const firstGroupData = finalData[0];
+   const firstGroupUnder2 = firstGroupData.Grade_F;
+   const firstGroupUnder2YPosition = y(firstGroupUnder2);
+   
+   const annotations = [
+      {
+         note: {
+            label: `0 Hour Study Time Per Week has the most students with Grade F`,
+            title: `Student Count: ${firstGroupUnder2}`,
+            wrap: 200,
+         },
+         x: x(firstGroupData.StudyTimeWeekly) + x.bandwidth() / 2,
+         y: firstGroupUnder2YPosition,
+         dy: -10,
+         dx: 0,
+         subject: { radius: 15, radiusPadding: 5 },
+         color: ["darkred"]
+      }
+   ];
+   return annotations;
+}
+
+function renderCountByStudyTime(data, title, current = "") {
+   d3.select("#visualization").html(""); // Clear previous visualization
+   
+   const { width, height, margin, svg, tooltip } = setupSvgAndScales();
+   
+   const finalData = prepareDataForStudyTime(data, current);
+   
    const x = d3.scaleBand()
-               .domain(data.map(d => d.ParentalEducation))
-               .range([0, 960])
-               .padding(0.1);
-
+   .domain(finalData.map(d => d.StudyTimeWeekly))
+   .range([0, width])
+   .padding(0.1);
+   
    const y = d3.scaleLinear()
-               .domain([0, d3.max(data, d => d.GPA)])
-               .range([500, 0]);
-
-   svg.append("g")
-      .attr("transform", "translate(0,500)")
-      .call(d3.axisBottom(x).tickFormat(d => `Level ${d}`));
-
-   svg.append("g")
-      .call(d3.axisLeft(y));
-
-   svg.append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".75em")
-      .style("text-anchor", "end")
-      .text("GPA");
-
-   svg.append("text")
-      .attr("x", 960 / 2)
-      .attr("y", 470)
-      .attr("text-anchor", "middle")
-      .text("Parental Education Level");
-
+   .domain([0, d3.max(finalData, d => d.count)])
+   .range([height, 0]);
+   
+   setupAxes(svg, x, y, width, height, margin, title);
+   
+   const maxCount = d3.max(finalData, d => d.count);
+   const minCount = d3.min(finalData, d => d.count);
+   const maxData = finalData.find(d => d.count === maxCount);
+   const minData = finalData.find(d => d.count === minCount);
+   
    svg.selectAll("rect")
-      .data(data)
-      .enter()
-      .append("rect")
-      .attr("x", d => x(d.ParentalEducation))
-      .attr("y", d => y(d.GPA))
-      .attr("width", x.bandwidth())
-      .attr("height", d => 500 - y(d.GPA))
-      .attr("fill", "steelblue")
-      .on("mouseover", function(event, d) {
-         tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-         tooltip.html(`Parental Education: Level ${d.ParentalEducation}<br>GPA: ${d.GPA}`)
-                .style("left", (event.pageX + 5) + "px")
-                .style("top", (event.pageY - 28) + "px");
-     })
-     .on("mouseout", function(d) {
-         tooltip.transition()
-                .duration(500)
-                .style("opacity", 0);
-     });
+   .data(finalData)
+   .enter()
+   .append("rect")
+   .attr("x", d => x(d.StudyTimeWeekly))
+   .attr("y", d => y(d.count))
+   .attr("width", x.bandwidth())
+   .attr("height", d => height - y(d.count))
+   .attr("fill", d => {
+      if (current !== "highlightExtremes") return "steelblue";
+      if (current === "highlightExtremes" && (d.count === maxCount || d.count === minCount)) return "steelblue";
+      return "lightgray";
+   })
+   .on("mouseover", function (event, d) {
+      tooltip.transition()
+      .duration(200)
+      .style("opacity", .9);
+      tooltip.html(`Study Time: ${d3.format(".0f")(d.StudyTimeWeekly)}<br>Count: ${d.count}`);
+   })
+   .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+      tooltip.style("left", `${mouseX + 15}px`)
+      .style("top", `${mouseY - 15}px`);
+   })
+   .on("mouseout", function (d) {
+      tooltip.transition()
+      .duration(500)
+      .style("opacity", 0);
+   });
+   
+   if (current === "highlightExtremes") {
+      const annotations = highlightExtremesAnnotations(x, y, finalData);
+      const makeAnnotations = d3.annotation().annotations(annotations);
+
+      svg.append("g")
+      .attr("class", "annotation-group")
+      .call(makeAnnotations);
+   }
 }
 
-// Function to render GPA by Extracurricular Activities
-function renderGPAByExtracurricular(data) {
-  d3.select("#visualization").html(""); // Clear previous visualization
-
-  const svg = d3.select("#visualization")
-                .append("svg")
-                .attr("width", 960)
-                .attr("height", 500);
-
-  const tooltip = d3.select("#visualization")
-                    .append("div")
-                    .attr("class", "tooltip")
-                    .style("opacity", 0);
-
-  const extracurriculars = ["Extracurricular", "Sports", "Music", "Volunteering"];
-  const avgGPA = extracurriculars.map(activity => {
-      const filteredData = data.filter(d => d[activity] === 1);
-      const avgGPA = d3.mean(filteredData, d => d.GPA);
-      return { activity, avgGPA };
-  });
-
-  const x = d3.scaleBand()
-              .domain(extracurriculars)
-              .range([0, 960])
-              .padding(0.1);
-
-  const y = d3.scaleLinear()
-              .domain([0, d3.max(avgGPA, d => d.avgGPA)])
-              .range([500, 0]);
-
-  svg.append("g")
-     .attr("transform", "translate(0,500)")
-     .call(d3.axisBottom(x));
-
-  svg.append("g")
-     .call(d3.axisLeft(y));
-
-  svg.append("text")
-     .attr("transform", "rotate(-90)")
-     .attr("y", 6)
-     .attr("dy", ".75em")
-     .style("text-anchor", "end")
-     .text("Average GPA");
-
-  svg.append("text")
-     .attr("x", 960 / 2)
-     .attr("y", 470)
-     .attr("text-anchor", "middle")
-     .text("Extracurricular Activities");
-
-  svg.selectAll("rect")
-     .data(avgGPA)
-     .enter()
-     .append("rect")
-     .attr("x", d => x(d.activity))
-     .attr("y", d => y(d.avgGPA))
-     .attr("width", x.bandwidth())
-     .attr("height", d => 500 - y(d.avgGPA))
-     .attr("fill", "steelblue")
-     .on("mouseover", function(event, d) {
-         tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-         tooltip.html(`Activity: ${d.activity}<br>Avg GPA: ${d.avgGPA.toFixed(2)}`)
-                .style("left", (event.pageX + 5) + "px")
-                .style("top", (event.pageY - 28) + "px");
-     })
-     .on("mouseout", function(d) {
-         tooltip.transition()
-                .duration(500)
-                .style("opacity", 0);
-     });
+function renderExtracurricularByStudyTime(data, current = "ExtracurricularByStudyTime") {
+   d3.select("#visualization").html(""); // Clear previous visualization
+   
+   const { width, height, margin, svg, tooltip } = setupSvgAndScales();
+   
+   const finalData = prepareDataForStudyTime(data, current);
+   
+   const x = d3.scaleBand()
+   .domain(finalData.map(d => d.StudyTimeWeekly))
+   .range([0, width])
+   .padding(0.1);
+   
+   const y = d3.scaleLinear()
+   .domain([0, d3.max(finalData, d => d.total)])
+   .range([height, 0]);
+   
+   const color = d3.scaleOrdinal()
+   .domain(["Extracurricular", "Sports", "Music", "Volunteering"])
+   .range(["#375da1", "#37a1a1", "#7db36d", "#e8c974"]);
+   
+   setupAxes(svg, x, y, width, height, margin, "Extracurricular Distribution");
+   
+   const stack = d3.stack()
+   .keys(["Extracurricular", "Sports", "Music", "Volunteering"])
+   .order(d3.stackOrderNone)
+   .offset(d3.stackOffsetNone);
+   
+   const series = stack(finalData);
+   
+   svg.selectAll(".serie")
+   .data(series)
+   .enter().append("g")
+   .attr("class", "serie")
+   .attr("fill", d => color(d.key))
+   .selectAll("rect")
+   .data(d => d)
+   .enter().append("rect")
+   .attr("x", d => x(d.data.StudyTimeWeekly))
+   .attr("y", d => y(d[1]))
+   .attr("height", d => y(d[0]) - y(d[1]))
+   .attr("width", x.bandwidth())
+   .on("mouseover", function (event, d) {
+      const key = d3.select(this.parentNode).datum().key;
+      tooltip.transition()
+      .duration(200)
+      .style("opacity", .9);
+      tooltip.html(`Study Time: ${d3.format(".0f")(d.data.StudyTimeWeekly)}<br>${key}: ${d.data[key]}`);
+   })
+   .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+      tooltip.style("left", `${mouseX + 15}px`)
+      .style("top", `${mouseY - 15}px`);
+   })
+   .on("mouseout", function (d) {
+      tooltip.transition()
+      .duration(500)
+      .style("opacity", 0);
+   });
 }
 
-// Function to render Absences vs GPA
-function renderAbsencesVsGPA(data) {
-  d3.select("#visualization").html(""); // Clear previous visualization
-
-  const svg = d3.select("#visualization")
-                .append("svg")
-                .attr("width", 960)
-                .attr("height", 500);
-
-  const tooltip = d3.select("#visualization")
-                    .append("div")
-                    .attr("class", "tooltip")
-                    .style("opacity", 0);
-
-  const x = d3.scaleLinear()
-              .domain([0, d3.max(data, d => d.Absences)])
-              .range([0, 960]);
-
-  const y = d3.scaleLinear()
-              .domain([0, d3.max(data, d => d.GPA)])
-              .range([500, 0]);
-
-  svg.append("g")
-     .attr("transform", "translate(0,500)")
-     .call(d3.axisBottom(x));
-
-  svg.append("g")
-     .call(d3.axisLeft(y));
-
-  svg.append("text")
-     .attr("transform", "rotate(-90)")
-     .attr("y", 6)
-     .attr("dy", ".75em")
-     .style("text-anchor", "end")
-     .text("GPA");
-
-  svg.append("text")
-     .attr("x", 960 / 2)
-     .attr("y", 470)
-     .attr("text-anchor", "middle")
-     .text("Absences");
-
-  svg.selectAll("circle")
-     .data(data)
-     .enter()
-     .append("circle")
-     .attr("cx", d => x(d.Absences))
-     .attr("cy", d => y(d.GPA))
-     .attr("r", 3)
-     .attr("fill", "red")
-     .on("mouseover", function(event, d) {
-         tooltip.transition()
-                .duration(200)
-                .style("opacity", .9);
-         tooltip.html(`Absences: ${d.Absences}<br>GPA: ${d.GPA}`)
-                .style("left", (event.pageX + 5) + "px")
-                .style("top", (event.pageY - 28) + "px");
-     })
-     .on("mouseout", function(d) {
-         tooltip.transition()
-                .duration(500)
-                .style("opacity", 0);
-     });
+function renderGPAByStudyTime(data, current = "GPAByStudyTime") {
+   d3.select("#visualization").html(""); // Clear previous visualization
+   
+   const { width, height, margin, svg, tooltip } = setupSvgAndScales();
+   const finalData = prepareDataForStudyTime(data, current);
+   
+   const x = d3.scaleBand()
+   .domain(finalData.map(d => d.StudyTimeWeekly))
+   .range([0, width])
+   .padding(0.1);
+   
+   const y = d3.scaleLinear()
+   .domain([0, d3.max(finalData, d => d.total)])
+   .range([height, 0]);
+   
+   const color = d3.scaleOrdinal()
+   .domain(["Grade_F", "Grade_C_D", "Grade_A_B"])
+   .range(["#375da1", "#37a1a1", "#7db36d"]);
+   
+   setupAxes(svg, x, y, width, height, margin, "GPA Distribution by Study Time");
+   
+   const stack = d3.stack()
+   .keys(["Grade_F", "Grade_C_D", "Grade_A_B"])
+   .order(d3.stackOrderNone)
+   .offset(d3.stackOffsetNone);
+   
+   const series = stack(finalData);
+   
+   svg.selectAll(".serie")
+   .data(series)
+   .enter().append("g")
+   .attr("class", "serie")
+   .attr("fill", d => color(d.key))
+   .selectAll("rect")
+   .data(d => d)
+   .enter().append("rect")
+   .attr("x", d => x(d.data.StudyTimeWeekly))
+   .attr("y", d => y(d[1]))
+   .attr("height", d => y(d[0]) - y(d[1]))
+   .attr("width", x.bandwidth())
+   .on("mouseover", function (event, d) {
+      const key = d3.select(this.parentNode).datum().key;
+      tooltip.transition()
+      .duration(200)
+      .style("opacity", .9);
+      tooltip.html(`Study Time: ${d3.format(".0f")(d.data.StudyTimeWeekly)}<br>${key}: ${d.data[key]}`);
+   })
+   .on("mousemove", function (event) {
+      const [mouseX, mouseY] = d3.pointer(event);
+      tooltip.style("left", `${mouseX + 15}px`)
+      .style("top", `${mouseY - 15}px`);
+   })
+   .on("mouseout", function (d) {
+      tooltip.transition()
+      .duration(500)
+      .style("opacity", 0);
+   });
+   
+   const annotations = gpaAnnotations(x, y, finalData);
+   const makeAnnotations = d3.annotation().annotations(annotations);
+   svg.append("g")
+   .attr("class", "annotation-group")
+   .call(makeAnnotations);
+   
 }

@@ -1,41 +1,44 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background-color: #f4f4f4;
+    font-family: "Open Sans", sans-serif;
+    background-color: #a0c0f6;
 }
 
-#container {
+h2 {
+    margin-top: 10;
     text-align: center;
+    color: #000;
 }
 
-#visualization {
-    margin: 0 auto;
-    width: 960px;
-    height: 500px;
-    position: relative;
+.container {
+    margin: 5% 5%;
+    margin-bottom: 8%;
 }
 
 #controls {
-    margin-top: 20px;
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 button {
-    margin: 5px;
-    padding: 10px;
+    margin: 10px;
+    padding: 30px;
     background-color: #007BFF;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 10px;
     cursor: pointer;
 }
 
 button:hover {
     background-color: #0056b3;
+}
+
+#visualization {
+    margin: auto;
+    width: 960px;
+    height: 500px;
+    position: relative;
+    background-color: #a0c0f6;
 }
 
 .tooltip {
@@ -49,4 +52,24 @@ button:hover {
     border: 0px;
     border-radius: 8px;
     pointer-events: none;
+}
+
+.button {
+    padding: 10px 20px;
+    margin: 5px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.button.enabled {
+    background-color: #0056b3; 
+    color: white;
+}
+
+.button.disabled {
+    background-color: #ccc; /* Gray */
+    color: #666;
+    cursor: not-allowed;
 }
