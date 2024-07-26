@@ -11,8 +11,7 @@ d3.csv("data/Student_performance_data.csv", d => {
    };
 }).then(data => {
    let currentScene = 0;
-   const scenes = [renderOverview, renderHighlightExtremes, renderExtracurricularByStudyTime, renderGPAByStudyTime];
-   
+   const scenes = [renderOverviewWithAnnotations, renderHighlightExtremesWithAnnotations, renderExtracurricularByStudyTimeWithAnnotations, renderGPAByStudyTimeWithAnnotations];   
    // Initial Scene
    updateButtons();
    scenes[currentScene](data);
@@ -50,14 +49,6 @@ d3.csv("data/Student_performance_data.csv", d => {
       .attr("disabled", currentScene === scenes.length - 1 ? true : null);
    }
 });
-
-function renderOverview(data) {
-   renderCountByStudyTime(data, "Overview");
-}
-
-function renderHighlightExtremes(data) {
-   renderCountByStudyTime(data, "", "highlightExtremes");
-}
 
 function setupSvgAndScales() {
    const margin = { top: 100, right: 50, bottom: 80, left: 80 };
@@ -105,7 +96,7 @@ function setupAxes(svg, x, y, width, height, margin, title) {
    
    svg.append("text")
    .attr("x", width / 2)
-   .attr("y", -margin.top / 2 + 20)
+   .attr("y", -margin.top / 2 + 10)
    .attr("text-anchor", "middle")
    .style("font-size", "16px")
    .style("font-weight", "bold")
@@ -113,81 +104,78 @@ function setupAxes(svg, x, y, width, height, margin, title) {
 }
 
 
-function prepareDataForStudyTime(data, current = "") { 
-   let finalData;
-   let countData;
+function prepareDataForStudyTime(data, current = "") {
+   let minStudyTime = d3.min(data, d => d.StudyTimeWeekly);
+   let maxStudyTime = d3.max(data, d => d.StudyTimeWeekly);
+   let studyTimeGroups = d3.range(minStudyTime, maxStudyTime, (maxStudyTime - minStudyTime) / 20);
    
-   // Group the data into 20 intervals
-   if (current === "highlightExtremes" || current === "") {
-      const countByStudyTime = d3.rollup(data, v => v.length, d => d.StudyTimeWeekly);
-      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, count]) => ({ StudyTimeWeekly, count }));
-      
-   } else if (current === "ExtracurricularByStudyTime") {
-      const countByStudyTime = d3.rollup(data, v => ({
-         total: v.length,
-         Extracurricular: d3.sum(v, d => d.Extracurricular),
-         Sports: d3.sum(v, d => d.Sports),
-         Music: d3.sum(v, d => d.Music),
-         Volunteering: d3.sum(v, d => d.Volunteering)
-      }), d => d.StudyTimeWeekly);
-      
-      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, counts]) => ({ StudyTimeWeekly, ...counts }));
-      
-   } else { // current === "GPAByStudyTime"
-      const countByStudyTime = d3.rollup(data, v => ({
-         total: v.length,
-         Grade_F: d3.sum(v, d => d.GPA < 2 ? 1 : 0),
-         Grade_C_D: d3.sum(v, d => d.GPA >= 2 && d.GPA < 3 ? 1 : 0),
-         Grade_A_B: d3.sum(v, d => d.GPA >= 3 ? 1 : 0)
-      }), d => d.StudyTimeWeekly);
-      
-      countData = Array.from(countByStudyTime, ([StudyTimeWeekly, counts]) => ({ StudyTimeWeekly, ...counts }));
+   let calculatedData = {};
+   
+   for (const record of data) {
+      let studyTime = record.StudyTimeWeekly;
+      if (!calculatedData[studyTime]) {
+         calculatedData[studyTime] = {
+            StudyTimeWeekly: studyTime,
+            total: 0,
+            Extracurricular: 0,
+            Sports: 0,
+            Music: 0,
+            Volunteering: 0,
+            Grade_F: 0,
+            Grade_C_D: 0,
+            Grade_A_B: 0
+         };
+      }
+      calculatedData[studyTime].total += 1;
+      if (current === "ExtracurricularByStudyTime") {
+         calculatedData[studyTime].Extracurricular += record.Extracurricular;
+         calculatedData[studyTime].Sports += record.Sports;
+         calculatedData[studyTime].Music += record.Music;
+         calculatedData[studyTime].Volunteering += record.Volunteering;
+      }
+      if (current === "GPAByStudyTime") {
+         if (record.GPA < 2) calculatedData[studyTime].Grade_F += 1;
+         if (record.GPA >= 2 && record.GPA < 3) calculatedData[studyTime].Grade_C_D += 1;
+         if (record.GPA >= 3) calculatedData[studyTime].Grade_A_B += 1;
+      }
    }
    
-   countData.sort((a, b) => a.StudyTimeWeekly - b.StudyTimeWeekly);
+   let finalData = Object.values(calculatedData).sort((a, b) => a.StudyTimeWeekly - b.StudyTimeWeekly);
    
-   // Determine the 20 evenly spaced intervals
-   const studyTimeExtent = d3.extent(countData, d => d.StudyTimeWeekly);
-   const studyTimeGroups = d3.scaleQuantize()
-   .domain(studyTimeExtent)
-   .range(d3.range(20));
-   
-   if (current === "highlightExtremes" || current === "") {
-      const groupedData = d3.rollups(countData, v => d3.sum(v, d => d.count), d => studyTimeGroups(d.StudyTimeWeekly));
-      finalData = Array.from(groupedData, ([group, count]) => ({
-         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
-         count
-      }));
+   let groupedData = [];
+   for (let i = 0; i < studyTimeGroups.length - 1; i++) {
+      let groupStart = studyTimeGroups[i];
+      let groupEnd = studyTimeGroups[i + 1];
+      let group = finalData.filter(d => d.StudyTimeWeekly >= groupStart && d.StudyTimeWeekly < groupEnd);
       
-   } else if (current === "ExtracurricularByStudyTime") {
-      const groupedData = d3.rollups(countData, v => ({
-         total: d3.sum(v, d => d.total),
-         Extracurricular: d3.sum(v, d => d.Extracurricular),
-         Sports: d3.sum(v, d => d.Sports),
-         Music: d3.sum(v, d => d.Music),
-         Volunteering: d3.sum(v, d => d.Volunteering)
-      }), d => studyTimeGroups(d.StudyTimeWeekly));
-      
-      finalData = Array.from(groupedData, ([group, counts]) => ({
-         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
-         ...counts
-      }));
-      
-   } else { // current === "GPAByStudyTime"
-      const groupedData = d3.rollups(countData, v => ({
-         total: d3.sum(v, d => d.total),
-         Grade_F: d3.sum(v, d => d.Grade_F),
-         Grade_C_D: d3.sum(v, d => d.Grade_C_D),
-         Grade_A_B: d3.sum(v, d => d.Grade_A_B)
-      }), d => studyTimeGroups(d.StudyTimeWeekly));
-      
-      finalData = Array.from(groupedData, ([group, counts]) => ({
-         StudyTimeWeekly: studyTimeGroups.invertExtent(group)[0],
-         ...counts
-      }));
+      if (current === "highlightExtremes" || current === "") {
+         groupedData.push({
+            StudyTimeWeekly: groupStart,
+            count: d3.sum(group, d => d.total)
+         });
+      } else if (current === "ExtracurricularByStudyTime") {
+         groupedData.push({
+            StudyTimeWeekly: groupStart,
+            total: d3.sum(group, d => d.total),
+            Extracurricular: d3.sum(group, d => d.Extracurricular),
+            Sports: d3.sum(group, d => d.Sports),
+            Music: d3.sum(group, d => d.Music),
+            Volunteering: d3.sum(group, d => d.Volunteering)
+         });
+      } else { // current === "GPAByStudyTime"
+         groupedData.push({
+            StudyTimeWeekly: groupStart,
+            total: d3.sum(group, d => d.total),
+            Grade_F: d3.sum(group, d => d.Grade_F),
+            Grade_C_D: d3.sum(group, d => d.Grade_C_D),
+            Grade_A_B: d3.sum(group, d => d.Grade_A_B)
+         });
+      }
    }
-   return finalData;
+   
+   return groupedData;
 }
+
 
 
 function highlightExtremesAnnotations(x, y, finalData) {
@@ -195,7 +183,7 @@ function highlightExtremesAnnotations(x, y, finalData) {
    const minCount = d3.min(finalData, d => d.count);
    const maxData = finalData.find(d => d.count === maxCount);
    const minData = finalData.find(d => d.count === minCount);
-
+   
    const annotations = [
       {
          note: {
@@ -250,6 +238,47 @@ function gpaAnnotations(x, y, finalData) {
    ];
    return annotations;
 }
+
+
+function renderSceneAnnotations(sceneTitle) {
+   const annotationContainer = d3.select("#scene-annotations");
+   annotationContainer.html(""); 
+
+   annotationContainer.append("div")
+       .attr("class", "scene-annotation")
+       .style("margin", "50px")
+       .style("width", "90%")
+       .style("position", "relative")
+       .style("font-size", "16px")
+       .text(sceneTitle);
+}
+
+
+function renderOverviewWithAnnotations(data) {
+   renderCountByStudyTime(data, "Overview");
+   const annotations = "The distribution of students' study time is relatively uniform, with no extreme peaks or troughs. Most study time intervals have a consistent number of students, indicating that students tend to distribute their study hours evenly across different weekly intervals.";
+   renderSceneAnnotations(annotations);
+}
+
+function renderHighlightExtremesWithAnnotations(data) {
+   renderCountByStudyTime(data, "", "highlightExtremes");
+   const annotations = "The chart highlights that 10 hours of study time per week is the most common among students, with a maximum count of 144 students. Conversely, 15 hours of study time per week has the least number of students, with a count of 90. This indicates that a moderate study time (around 10 hours per week) is more popular among students, whereas longer study durations (like 15 hours) are less common. This could suggest that students find a balance at around 10 hours that optimally fits their schedules and study needs.";
+   renderSceneAnnotations(annotations);
+}
+
+
+function renderExtracurricularByStudyTimeWithAnnotations(data) {
+   renderExtracurricularByStudyTime(data, "ExtracurricularByStudyTime");
+   const annotations = "This suggests that students who study a moderate amount of time are also able to balance their academics with various extracurricular activities. According to the chart, there are relatively more students who participate in extracurricular activities than who participate in volunteering. ";
+   renderSceneAnnotations(annotations);
+}
+
+function renderGPAByStudyTimeWithAnnotations(data) {
+   renderGPAByStudyTime(data, "GPAByStudyTime");
+   const annotations = "The GPA distribution shows a clear trend where students with zero study hours per week have the highest count of students with a GPA under 2 (Grade F). As study hours increase, the number of students with higher GPAs (Grades A and B) also increases. This indicates a strong correlation between study time and academic performance, where more study time generally leads to better grades.";
+   renderSceneAnnotations(annotations);
+}
+
 
 function renderCountByStudyTime(data, title, current = "") {
    d3.select("#visualization").html(""); // Clear previous visualization
@@ -307,7 +336,7 @@ function renderCountByStudyTime(data, title, current = "") {
    if (current === "highlightExtremes") {
       const annotations = highlightExtremesAnnotations(x, y, finalData);
       const makeAnnotations = d3.annotation().annotations(annotations);
-
+      
       svg.append("g")
       .attr("class", "annotation-group")
       .call(makeAnnotations);
@@ -372,6 +401,7 @@ function renderExtracurricularByStudyTime(data, current = "ExtracurricularByStud
       .duration(500)
       .style("opacity", 0);
    });
+
 }
 
 function renderGPAByStudyTime(data, current = "GPAByStudyTime") {
