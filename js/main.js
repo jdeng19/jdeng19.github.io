@@ -275,7 +275,7 @@ function renderExtracurricularByStudyTimeWithAnnotations(data) {
 
 function renderGPAByStudyTimeWithAnnotations(data) {
    renderGPAByStudyTime(data, "GPAByStudyTime");
-   const annotations = "The GPA distribution shows a clear trend where students with zero study hours per week have the highest count of students with a GPA under 2 (Grade F). As study hours increase, the number of students with higher GPAs (Grades A and B) also increases. This indicates a strong correlation between study time and academic performance, where more study time generally leads to better grades.";
+   const annotations = "The GPA distribution shows a clear trend where students with zero study hours per week have the highest count of students with a Grade F. As study hours increase, the number of students with higher GPAs (Grades A and B) also increases. This indicates a strong correlation between study time and academic performance, where more study time generally leads to better grades.";
    renderSceneAnnotations(annotations);
 }
 
@@ -300,8 +300,6 @@ function renderCountByStudyTime(data, title, current = "") {
    
    const maxCount = d3.max(finalData, d => d.count);
    const minCount = d3.min(finalData, d => d.count);
-   const maxData = finalData.find(d => d.count === maxCount);
-   const minData = finalData.find(d => d.count === minCount);
    
    svg.selectAll("rect")
    .data(finalData)
